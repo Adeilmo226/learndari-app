@@ -1,0 +1,25 @@
+{
+  "$schema": "https://rork.com/schema/rork.json",
+  "apps": [
+    {
+      "name": "LearnDari",
+      "path": "ios-learndari",
+      "framework": "swift"
+    },
+    {
+      "name": "Functions",
+      "path": "functions",
+      "framework": "cloudflare"
+    },
+    {
+      "name": "LearnDari Studio",
+      "path": "web-studio",
+      "framework": "web"
+    },
+    {
+      "name": "Backend",
+      "path": "backend",
+      "framework": "supabase"
+    }
+  ]
+}
