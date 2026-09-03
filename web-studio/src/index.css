@@ -157,6 +157,36 @@ All colors MUST be HSL.
   .animate-in-up {
     animation: in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /* The "START" flag above the current node breathes, so the eye finds it. */
+  .animate-bubble-lift {
+    animation: bubble-lift 0.85s ease-in-out infinite alternate;
+  }
+
+  /* A ring that swells and fades out of the live node. */
+  .animate-halo {
+    animation: halo 1.5s ease-out infinite;
+  }
+}
+
+@keyframes bubble-lift {
+  from {
+    transform: translateY(2px);
+  }
+  to {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes halo {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
 }
 
 @keyframes in-up {

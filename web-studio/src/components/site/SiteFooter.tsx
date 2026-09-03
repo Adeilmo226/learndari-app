@@ -36,7 +36,7 @@ export function SiteFooter(): JSX.Element {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <img src="/icon.png" alt="" className="h-8 w-8 rounded-lg" />
+              <img src="/learndari-mark.png" alt="" className="h-9 w-9" />
               <span className="text-lg font-bold tracking-tight">
                 Learn<span className="text-primary">Dari</span>
               </span>

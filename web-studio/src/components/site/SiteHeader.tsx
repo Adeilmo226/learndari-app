@@ -16,7 +16,7 @@ const links: { to: string; label: string }[] = [
 function Wordmark(): JSX.Element {
   return (
     <Link to="/" className="flex items-center gap-2.5" aria-label="LearnDari home">
-      <img src="/icon.png" alt="" className="h-8 w-8 rounded-lg" />
+      <img src="/learndari-mark.png" alt="" className="h-9 w-9" />
       <span className="text-lg font-bold tracking-tight text-foreground">
         Learn<span className="text-primary">Dari</span>
       </span>

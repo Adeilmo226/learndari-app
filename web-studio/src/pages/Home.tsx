@@ -75,7 +75,7 @@ const steps: { step: string; title: string; body: string }[] = [
   },
   {
     step: "02",
-    title: "Practise it",
+    title: "Practice it",
     body: "Multiple choice, listening and matching keep coming back until the word sticks.",
   },
   {
