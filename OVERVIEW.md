@@ -1,9 +1,9 @@
 # LearnDari — Project Overview
 
-Last updated: 2026-09-02
+Last updated: 2026-09-04
 
-A Dari (Afghan Persian) language-learning product: an iOS app for learners, a public
-website + private content Studio, a Cloudflare Worker API, and a Supabase database.
+A Dari (Afghan Persian) language-learning product: iOS and Android apps for learners, a
+public website + private content Studio, a Cloudflare Worker API, and a Supabase database.
 
 ---
 
@@ -11,7 +11,7 @@ website + private content Studio, a Cloudflare Worker API, and a Supabase databa
 
 **LearnDari** teaches Dari through short Duolingo-style lessons built on vocabulary,
 example sentences, proverbs and culture articles. Content is authored by the owner in a
-private web Studio and served to both the iOS app and the website from one API.
+private web Studio and served to the iOS app, the Android app and the website from one API.
 
 Monetisation: free first lesson, then a subscription — **$4.99/month or $30/year**, each
 starting with an Apple-managed free trial.
@@ -26,11 +26,12 @@ starting with an Apple-managed free trial.
 
 ## 2. Repository layout
 
-Four apps registered in `rork.json`:
+Five apps registered in `rork.json`:
 
 | Folder | Framework | What it is |
 |---|---|---|
 | `ios-learndari/` | Swift / SwiftUI | The iPhone app (the product) |
+| `android/` | Kotlin / Jetpack Compose | The Android app — a clone of the iPhone app |
 | `web-studio/` | Vite + React + Tailwind + shadcn | Public website **and** private Studio CMS |
 | `functions/` | Cloudflare Worker | The API — the only thing that touches the database |
 | `backend/` | Supabase | Database schema + generated types |
@@ -44,6 +45,18 @@ ios-learndari/LearnDari/
                Flashcards, Quiz, Explore, Culture, Profile, Paywall,
                ExerciseChoice, ExerciseMatch, WordRow, WordOfTheDayCard
   Assets.xcassets/  AppIcon, Logo, afghan_tea_ceremony (paywall artwork)
+
+android/app/src/main/java/com/rork/learndariandroid/
+  data/        Models, MockData, CultureTopics, ContentRepository, ProgressStore, Backend
+  domain/      LessonSession — the exercise engine
+  audio/       AudioService — recording → backend TTS → on-device TTS
+  ui/theme/    Brand tokens + AppTheme
+  ui/components/  AppCard, AudioButton, DariText, WordRow, StatTile,
+                  WordOfTheDayCard, ProverbCard, buttons
+  ui/screens/  Learn, Lesson, LessonSession, Exercises, Vocab, VocabSet,
+               Flashcards, Quiz, Explore, Culture, Profile
+  ui/navigation/  AppNavigation — bottom bar + NavHost
+  LearnDariApplication.kt  AppGraph: the three long-lived services
 
 web-studio/src/
   pages/       Home, Learn, Lesson, Vocab, VocabSet, Explore, Culture,
@@ -76,6 +89,7 @@ functions/
 | RevenueCat project | `proj472b9c32` |
 | RevenueCat app (App Store) | `app65e74c824e` |
 | iOS bundle id | `app.rork.1imxcfck7nq16l7mktvau` |
+| Android application id | `com.rork.learndariandroid` |
 | Entitlement identifier | `plus` |
 
 ### Environment variables
@@ -88,7 +102,12 @@ Private (server only, never in client code): `SUPABASE_SERVICE_ROLE_KEY`,
 `REVENUECAT_WEBHOOK_SECRET`, `RORK_AUTH_SECRET_KEY`, `STUDIO_PASSWORD`.
 
 In Swift, read these via `Config.KEY_NAME` (`Config.swift`), never
-`ProcessInfo.processInfo.environment`. In the web app, `import.meta.env.VITE_*`.
+`ProcessInfo.processInfo.environment`. In Kotlin, `Config.KEY_NAME` (`Config.kt`). In the
+web app, `import.meta.env.VITE_*`.
+
+The Android app additionally keeps a safe public default for the backend URL in
+`data/Backend.kt`, so a fresh checkout still has working content and audio even before
+any environment value is injected.
 
 Missing: **`EXPO_PUBLIC_REVENUECAT_TEST_API_KEY`** — requires a Test Store app to be
 created by hand in the RevenueCat dashboard.
@@ -128,6 +147,10 @@ the single worst thing a paywall can do.
 
 **Timestamps are epoch milliseconds on every platform.** Progress merges take the best of
 both records (`mergeProgress` in the Worker, `ProgressSnapshot.merged(with:)` in Swift).
+
+**Android stores progress on the device only, for now.** It has no accounts and no
+billing yet, so there is nothing to merge. When that lands it must go through the Worker
+like everything else — never straight to Supabase.
 
 **Trials are Apple's StoreKit introductory offers**, never a homemade countdown. Trial
 length, prices and savings are read from StoreKit at runtime and never hardcoded —
@@ -178,9 +201,11 @@ Deploy: functions deploy from this repo; last good build id `9e80e5ae6a193679874
 
 ---
 
-## 7. The lesson engine (identical on iOS and web)
+## 7. The lesson engine (identical on iOS, Android and web)
 
-This spec was tuned deliberately; keep both implementations in step if you change it.
+This spec was tuned deliberately; keep all three implementations in step if you change
+it. The Kotlin port in `android/.../domain/LessonSession.kt` mirrors the Swift original
+closely, tuning constants included.
 
 - Each new word gets an **intro card** first.
 - Then a mixed queue: ~50% multiple choice, ~25% listening, ~25% match-pairs,
@@ -196,9 +221,12 @@ This spec was tuned deliberately; keep both implementations in step if you chang
 **Audio**: human recordings uploaded via the Studio, with on-device / browser
 speech synthesis as fallback. Azure TTS was evaluated and dropped.
 
+On Android the fallback is `TextToSpeech` with a Persian voice, then Arabic, then
+English. Downloaded clips are cached in the app's cache directory.
+
 ---
 
-## 8. Subscriptions and analytics (iOS)
+## 8. Subscriptions and analytics (iOS only so far)
 
 **`Services/SubscriptionManager.swift`**
 `entitlementID = "plus"`, `configure()`, `identify(userID:)`, `signOut()`,
@@ -238,6 +266,9 @@ login/logout when `auth.user` changes, refreshes entitlement + backend on
   history, bulk paste, audio upload).
 - iOS lesson flow to the spec above, plus example sentences.
 - Full website rebuild matching the app, deployed.
+- **Android app built** — all five tabs, the winding lesson path, the full exercise
+  engine, flashcards, quizzes, culture and profile, plus its own generated app icon.
+  Build green (`runChecks({ appPath: "android" })`).
 - Supabase provisioned; three additive migrations applied; types regenerated.
 - Worker: Supabase-backed progress, `/me/subscription`, RevenueCat webhook, health checks.
 - RevenueCat connected; App Store app created; production key set.
@@ -263,6 +294,10 @@ login/logout when `auth.user` changes, refreshes entitlement + backend on
 - **Website subscription check** — the site does not yet read `/me/subscription`, so a
   paying subscriber gets no premium access on the web. This is the largest remaining gap
   and the obvious next job.
+- **Android has no accounts, subscriptions or analytics** — progress is on-device only.
+  Google Play Billing, Rork Auth and PostHog are all unstarted. The shared
+  `user_subscriptions` table already has a `store` column ready to hold `play`.
+- **Play Store listing** — no metadata, screenshots or feature graphic yet.
 - **Website Stripe checkout** — deliberately deferred. When built, it must write into
   `user_subscriptions`, not a second table.
 - **Migrating old website users** — `external_ids` is ready for it; the merge itself is
@@ -288,12 +323,16 @@ login/logout when `auth.user` changes, refreshes entitlement + backend on
 
 - Package manager is **bun**. Never npm or yarn.
 - iOS: after any change run `runChecks({ appPath: "ios-learndari" })` until green.
+  Android: `runChecks({ appPath: "android" })`.
   Web: `runChecks({ appPath: "web-studio" })`.
 - Swift: MVVM, one type per file, `@State` private, modern APIs
   (`foregroundStyle`, `NavigationStack`, `@Observable`). The project uses
   `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` — mark Codable DTOs and delegate
   callbacks `nonisolated`.
 - Do **not** create or edit `.entitlements` for In-App Purchase.
+- Android: Material 3 only, Compose Navigation, `MutableStateFlow` +
+  `collectAsStateWithLifecycle`, no XML layouts. Dependencies go through
+  `gradle/libs.versions.toml`.
 - Web: TypeScript strict, Tailwind, shadcn/ui from `src/components/ui/`,
   `@tanstack/react-query` for server state, react-router-dom for routing.
 - `web-studio/public/` files are cached at stable URLs — when changing a referenced

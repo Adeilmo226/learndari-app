@@ -20,6 +20,11 @@
       "name": "Backend",
       "path": "backend",
       "framework": "supabase"
+    },
+    {
+      "name": "LearnDari Android",
+      "path": "android",
+      "framework": "kotlin"
     }
   ]
 }
