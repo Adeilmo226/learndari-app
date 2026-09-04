@@ -4,6 +4,7 @@ import SwiftUI
 struct CultureView: View {
     enum Destination: Hashable {
         case proverbs
+        case traditions
         case wordOfTheDay
     }
 
@@ -41,6 +42,14 @@ struct CultureView: View {
                         )
                         Divider().padding(.leading, 74)
                         categoryRow(
+                            emoji: "🏛️",
+                            tint: Theme.amber.opacity(0.16),
+                            title: "Culture & Traditions",
+                            subtitle: "Afghan food culture, holidays, and customs",
+                            destination: .traditions
+                        )
+                        Divider().padding(.leading, 74)
+                        categoryRow(
                             emoji: "📖",
                             tint: Theme.greenSoft,
                             title: "Word of the Day",
@@ -59,6 +68,7 @@ struct CultureView: View {
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
                 case .proverbs: ProverbsListView()
+                case .traditions: TraditionsListView()
                 case .wordOfTheDay: WordOfTheDayView()
                 }
             }
@@ -208,6 +218,134 @@ struct ProverbsListView: View {
         .navigationTitle("Afghan Proverbs")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+    }
+}
+
+// MARK: - Culture & Traditions
+
+/// A single culture topic and its short sections. Editorial content that lives
+/// in the app (there is no culture-articles field in the shared content feed),
+/// mirroring the website's Culture & Traditions page.
+private struct CultureTopic: Identifiable {
+    let title: String
+    let icon: String
+    let sections: [Section]
+    var id: String { title }
+
+    struct Section: Identifiable {
+        let subtitle: String
+        let text: String
+        var id: String { subtitle }
+    }
+}
+
+private let cultureTopics: [CultureTopic] = [
+    CultureTopic(title: "Greetings & Etiquette", icon: "person.2.fill", sections: [
+        .init(subtitle: "Common Greetings", text: "Afghans greet each other with 'Salaam' (سلام) or 'Salaam Alaikum' (سلام علیکم). It's customary to ask about someone's health and family when greeting."),
+        .init(subtitle: "Handshakes", text: "Men typically shake hands with other men. Between genders, it's respectful to wait and see if a handshake is offered, as some may prefer not to shake hands."),
+        .init(subtitle: "Respect for Elders", text: "Showing respect to elders is fundamental in Afghan culture. Always greet elders first and address them with honorific titles."),
+    ]),
+    CultureTopic(title: "Hospitality & Food", icon: "cup.and.saucer.fill", sections: [
+        .init(subtitle: "Afghan Hospitality", text: "Hospitality (مهمان‌نوازی - mehmaan-nawaazi) is deeply valued. Guests are treated with the utmost respect and offered the best food and accommodations."),
+        .init(subtitle: "Tea Culture", text: "Tea (چای - chai) is central to Afghan culture. Green tea is often served with meals and throughout the day. Refusing tea can be seen as impolite."),
+        .init(subtitle: "Traditional Foods", text: "Popular dishes include Kabuli Pulao (rice with raisins and carrots), Mantu (dumplings), and various kebabs. Meals are often shared communally."),
+    ]),
+    CultureTopic(title: "Holidays & Celebrations", icon: "calendar", sections: [
+        .init(subtitle: "Nowruz (نوروز)", text: "The Persian New Year, celebrated on the spring equinox (March 20-21). It marks the beginning of spring and is celebrated with family gatherings, special foods, and the Haft-Seen table."),
+        .init(subtitle: "Eid al-Fitr & Eid al-Adha", text: "Major Islamic holidays celebrated with prayers, family gatherings, new clothes, and special foods. These are times of charity and community."),
+        .init(subtitle: "Independence Day", text: "Celebrated on August 19, commemorating Afghanistan's independence from British influence in 1919."),
+    ]),
+    CultureTopic(title: "Family & Social Structure", icon: "house.fill", sections: [
+        .init(subtitle: "Extended Family", text: "Family is the cornerstone of Afghan society. Extended families often live together or in close proximity, with strong bonds across generations."),
+        .init(subtitle: "Family Gatherings", text: "Regular family gatherings are common, especially on Fridays and during holidays. These gatherings strengthen family bonds and maintain traditions."),
+        .init(subtitle: "Respect and Hierarchy", text: "There's a clear hierarchy based on age and position within the family. Younger members show respect to elders through language and behavior."),
+    ]),
+    CultureTopic(title: "Arts & Literature", icon: "music.note", sections: [
+        .init(subtitle: "Poetry", text: "Poetry holds a special place in Afghan culture. Rumi, Hafez, and other Persian poets are widely read and quoted. Poetry gatherings (mushaira) are popular social events."),
+        .init(subtitle: "Music", text: "Traditional Afghan music features instruments like the rubab, tabla, and harmonium. Music is an important part of celebrations and gatherings."),
+        .init(subtitle: "Calligraphy & Art", text: "Persian calligraphy is highly valued as an art form. Geometric patterns and floral designs are common in Afghan arts and crafts."),
+    ]),
+    CultureTopic(title: "Core Values", icon: "heart.fill", sections: [
+        .init(subtitle: "Honor & Dignity (ناموس - namus)", text: "Personal and family honor are highly valued. Maintaining dignity and reputation in the community is important."),
+        .init(subtitle: "Hospitality (مهمان‌نوازی)", text: "Guests are considered a blessing. The saying 'Mehman habib-ullah ast' (A guest is beloved of God) reflects this value."),
+        .init(subtitle: "Community & Solidarity", text: "Strong sense of community and mutual support. Neighbors and community members help each other in times of need."),
+    ]),
+]
+
+struct TraditionsListView: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                ForEach(cultureTopics) { topic in
+                    TraditionCard(topic: topic)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 32)
+        }
+        .background(Color.white)
+        .navigationTitle("Culture & Traditions")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+    }
+}
+
+private struct TraditionCard: View {
+    let topic: CultureTopic
+
+    /// Red gradient header, matching the website's red topic cards.
+    private var headerGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color(red: 0.937, green: 0.267, blue: 0.267), Theme.red],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                Image(systemName: topic.icon)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(.white.opacity(0.2), in: .rect(cornerRadius: 12))
+
+                Text(topic.title)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(headerGradient)
+
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(topic.sections) { section in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(section.subtitle)
+                            .font(.headline)
+                            .foregroundStyle(Theme.ink)
+                        Text(section.text)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white)
+        }
+        .clipShape(.rect(cornerRadius: Theme.cardRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.cardRadius)
+                .strokeBorder(Theme.hairline, lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
