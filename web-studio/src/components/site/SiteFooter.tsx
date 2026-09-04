@@ -35,7 +35,7 @@ export function SiteFooter(): JSX.Element {
       <div className="site-container py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <img src="/Logo.png" alt="LearnDari" className="h-16 w-auto" />
+            <img src="/learndari-logo.png" alt="LearnDari" className="h-14 w-auto" />
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-gray-400">
               Dari Language Learning — vocabulary, reading and culture, with audio for
               every word.

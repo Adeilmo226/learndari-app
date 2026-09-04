@@ -16,7 +16,7 @@ const links: { to: string; label: string; icon: typeof Search }[] = [
 function Wordmark(): JSX.Element {
   return (
     <Link to="/" className="flex items-center" aria-label="LearnDari home">
-      <img src="/Logo.png" alt="LearnDari" className="h-14 w-auto" />
+      <img src="/learndari-logo.png" alt="LearnDari" className="h-12 w-auto" />
     </Link>
   );
 }
