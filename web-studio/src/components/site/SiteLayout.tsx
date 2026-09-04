@@ -13,7 +13,9 @@ export function SiteLayout({ children, flush = false }: SiteLayoutProps): JSX.El
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
-      <main className={flush ? "flex-1" : "flex-1 py-10 sm:py-14"}>{children}</main>
+      <main className={flush ? "flex flex-1 flex-col" : "flex-1 py-10 sm:py-14"}>
+        {children}
+      </main>
       <SiteFooter />
     </div>
   );

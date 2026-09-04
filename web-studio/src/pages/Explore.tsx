@@ -1,34 +1,37 @@
-import { Search, X } from "lucide-react";
+import { Search, Star, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { AudioButton } from "@/components/site/AudioButton";
-import { PageHeading, SiteLayout } from "@/components/site/SiteLayout";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SiteLayout } from "@/components/site/SiteLayout";
 import { allUniqueWords, useContent } from "@/hooks/useContent";
 import type { StudioWord } from "@/lib/content";
 
 const MAX_RESULTS = 60;
 
-function WordRow({ word }: { word: StudioWord }): JSX.Element {
-  return (
-    <li className="flex items-center gap-4 bg-card px-5 py-4">
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold text-foreground">{word.english}</p>
-        <p className="text-sm italic text-muted-foreground">{word.phonetic}</p>
-      </div>
-      <p className="dari-display shrink-0 text-2xl text-foreground">{word.dari}</p>
-      <AudioButton audioKey={word.audioKey} text={word.dari} size="sm" />
-    </li>
-  );
+/** Stable Word of the Day: today's scheduled entry, else a daily-rotating pick. */
+function pickWordOfTheDay(
+  scheduled: { date: string; word: StudioWord }[],
+  pool: StudioWord[],
+): StudioWord | null {
+  const today = new Date().toISOString().slice(0, 10);
+  const planned = scheduled.find((entry) => entry.date === today);
+  if (planned) return planned.word;
+  if (pool.length === 0) return null;
+  const daysSinceEpoch = Math.floor(Date.now() / 86_400_000);
+  return pool[daysSinceEpoch % pool.length];
 }
 
 export default function Explore(): JSX.Element {
-  const { content, isLoading } = useContent();
+  const { content } = useContent();
   const [query, setQuery] = useState<string>("");
 
   const words = useMemo(() => allUniqueWords(content), [content]);
+  const wordOfTheDay = useMemo(
+    () => pickWordOfTheDay(content.wordOfTheDaySchedule, content.popularWords.length ? content.popularWords : words),
+    [content.wordOfTheDaySchedule, content.popularWords, words],
+  );
 
   const results = useMemo<StudioWord[]>(() => {
     const term = query.trim().toLowerCase();
@@ -47,95 +50,172 @@ export default function Explore(): JSX.Element {
 
   return (
     <SiteLayout>
-      <PageHeading
-        title="Explore Dari Vocabulary"
-        subtitle="Search for words in English, Dari, or phonetic spelling."
-      />
-
-      <div className="site-container max-w-3xl">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Try “water”, “salaam” or آب"
-            aria-label="Search Dari vocabulary"
-            className="h-14 w-full rounded-full border border-border bg-card pl-14 pr-12 text-base outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
-          />
-          {isSearching && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear search"
-              className="absolute right-4 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <h1 className="mb-4 text-2xl font-bold text-gray-900 md:text-3xl">
+            Explore Dari Vocabulary
+          </h1>
+          <p className="text-xl text-gray-600">
+            Search for words in English, Dari, or phonetic spelling
+          </p>
         </div>
 
-        {isLoading && (
-          <div className="mt-8 space-y-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-16 rounded-xl" />
-            ))}
+        {/* Search bar */}
+        <div className="mx-auto mb-6 max-w-3xl">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              maxLength={100}
+              placeholder="Search for a word... (e.g., 'hello', 'salaam', or 'سلام')"
+              className="w-full rounded-xl border-2 border-gray-300 py-4 pl-14 pr-4 text-lg transition-colors focus:border-red-600 focus:outline-none"
+            />
+          </div>
+          <p className="mt-2 text-center text-sm text-gray-400">
+            Don&apos;t see the word you&apos;re looking for?{" "}
+            <Link to="/feedback" className="text-red-600 underline hover:text-red-700">
+              Let us know
+            </Link>
+          </p>
+        </div>
+
+        {/* Word of the Day */}
+        {!isSearching && wordOfTheDay && (
+          <div className="mx-auto mb-6 max-w-3xl">
+            <div className="rounded-2xl bg-gradient-to-br from-red-500 to-green-600 p-6 text-white shadow-xl">
+              <div className="mb-4 flex items-center gap-2">
+                <Star className="h-6 w-6" />
+                <h2 className="text-2xl font-bold">Word of the Day</h2>
+              </div>
+              <WordCard word={wordOfTheDay} featured />
+            </div>
           </div>
         )}
 
-        {!isLoading && isSearching && (
-          <div className="mt-8">
-            <p className="mb-3 text-sm text-muted-foreground">
-              {results.length === 0
-                ? "No matches"
-                : `${results.length}${results.length === MAX_RESULTS ? "+" : ""} ${
-                    results.length === 1 ? "result" : "results"
-                  }`}
-            </p>
+        {/* Search results */}
+        {isSearching && (
+          <div className="mx-auto max-w-5xl">
             {results.length > 0 ? (
-              <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
-                {results.map((word) => (
-                  <WordRow key={word.id} word={word} />
-                ))}
-              </ul>
+              <div>
+                <h2 className="mb-6 text-2xl font-bold text-gray-900">
+                  Results ({results.length}
+                  {results.length === MAX_RESULTS ? "+" : ""})
+                </h2>
+                <div className="space-y-3">
+                  {results.map((word) => (
+                    <WordCard key={word.id} word={word} />
+                  ))}
+                </div>
+              </div>
             ) : (
-              <div className="app-card p-10 text-center">
-                <p className="font-semibold text-foreground">
-                  Don't see the word you're looking for?
+              <div className="py-12 text-center">
+                <div className="mb-4 text-6xl">🔍</div>
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">No results found</h3>
+                <p className="text-gray-600">
+                  Try searching with different spelling or in Dari script
                 </p>
-                <p className="mx-auto mt-2 max-w-sm text-muted-foreground">
-                  We add words every week, and requests jump the queue.
-                </p>
-                <Link
-                  to="/feedback"
-                  className="mt-5 inline-block rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:brightness-110 active:scale-95"
-                >
-                  Let us know
-                </Link>
               </div>
             )}
           </div>
         )}
 
-        {!isLoading && !isSearching && content.popularWords.length > 0 && (
-          <div className="mt-10">
-            <h2 className="mb-3 text-lg font-semibold text-foreground">Popular Words</h2>
-            <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+        {/* Popular words (no active search) */}
+        {!isSearching && content.popularWords.length > 0 && (
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-6 flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-gray-700" />
+              <h2 className="text-2xl font-bold text-gray-900">Popular Words</h2>
+            </div>
+            <div className="space-y-3">
               {content.popularWords.map((word) => (
-                <WordRow key={word.id} word={word} />
+                <WordCard key={word.id} word={word} />
               ))}
-            </ul>
-
-            <div className="mt-8 rounded-2xl border border-dashed border-border p-8 text-center">
-              <p className="text-muted-foreground">
-                Searching covers every word in the course —{" "}
-                <span className="font-semibold text-foreground">{words.length}</span> and
-                counting.
-              </p>
             </div>
           </div>
         )}
       </div>
     </SiteLayout>
+  );
+}
+
+/** Word row with audio, in the original site's card styling. */
+function WordCard({
+  word,
+  featured = false,
+}: {
+  word: StudioWord;
+  featured?: boolean;
+}): JSX.Element {
+  if (featured) {
+    return (
+      <div className="rounded-xl border-2 border-white/20 bg-white/10 p-6 backdrop-blur-sm">
+        <div className="flex items-center justify-between">
+          <div className="grid flex-1 grid-cols-1 gap-6 md:grid-cols-3">
+            <div>
+              <p className="mb-1 text-sm text-white/80">English</p>
+              <p className="text-3xl font-bold text-white">{word.english}</p>
+            </div>
+            <div className="text-left">
+              <p className="mb-1 text-sm text-white/80">Dari</p>
+              <p className="text-left text-4xl font-bold text-white" dir="rtl">
+                {word.dari}
+              </p>
+            </div>
+            <div>
+              <p className="mb-1 text-sm text-white/80">Pronunciation</p>
+              <p className="text-2xl font-medium italic text-white">{word.phonetic}</p>
+            </div>
+          </div>
+          <AudioButton
+            audioKey={word.audioKey}
+            text={word.dari}
+            size="lg"
+            className="ml-6 h-16 w-16 border-white/30 bg-white/20 text-white hover:bg-white hover:text-red-600"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border-2 border-gray-200 bg-white p-6 transition-colors hover:border-gray-300">
+      <div className="flex items-center justify-between">
+        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-4">
+          <div>
+            <p className="mb-1 text-sm text-gray-500">English</p>
+            <p className="text-xl font-semibold text-gray-900">{word.english}</p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm text-gray-500">Dari</p>
+            <p className="text-left text-2xl font-semibold text-gray-900" dir="rtl">
+              {word.dari}
+            </p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm text-gray-500">Pronunciation</p>
+            <p className="text-xl font-medium italic text-gray-700">{word.phonetic}</p>
+          </div>
+          <div>
+            {word.category && (
+              <>
+                <p className="mb-1 text-sm text-gray-500">Category</p>
+                <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">
+                  {word.category}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <AudioButton
+          audioKey={word.audioKey}
+          text={word.dari}
+          size="lg"
+          className="ml-6 h-14 w-14 border-red-200 bg-red-100 text-red-600 hover:bg-red-600 hover:text-white"
+        />
+      </div>
+    </div>
   );
 }

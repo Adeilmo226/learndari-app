@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronLeft, ChevronRight, Layers, Target } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -9,21 +9,15 @@ import { QuizRunner } from "@/components/site/QuizRunner";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { allUniqueWords, useContent } from "@/hooks/useContent";
-import { cn } from "@/lib/utils";
+import type { StudioWord } from "@/lib/content";
 
-type Mode = "flashcards" | "quiz" | "list";
-
-const modes: { id: Mode; label: string; icon: typeof Layers }[] = [
-  { id: "flashcards", label: "Flashcards", icon: Layers },
-  { id: "quiz", label: "Quiz", icon: Target },
-  { id: "list", label: "All words", icon: ChevronRight },
-];
+type Mode = "overview" | "flashcards" | "quiz";
 
 export default function VocabSet(): JSX.Element {
   const { setId } = useParams<{ setId: string }>();
   const { content, isLoading } = useContent();
 
-  const [mode, setMode] = useState<Mode>("flashcards");
+  const [mode, setMode] = useState<Mode>("overview");
   const [index, setIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
 
@@ -44,10 +38,16 @@ export default function VocabSet(): JSX.Element {
     [words.length],
   );
 
+  const startMode = useCallback((next: Mode): void => {
+    setIndex(0);
+    setIsFlipped(false);
+    setMode(next);
+  }, []);
+
   if (isLoading) {
     return (
       <SiteLayout>
-        <div className="site-container space-y-6">
+        <div className="mx-auto max-w-7xl space-y-6 px-4 py-4 sm:px-6 lg:px-8">
           <Skeleton className="h-10 w-56" />
           <Skeleton className="h-80 rounded-2xl" />
         </div>
@@ -58,11 +58,11 @@ export default function VocabSet(): JSX.Element {
   if (!set) {
     return (
       <SiteLayout>
-        <div className="site-container text-center">
-          <h1 className="text-2xl font-bold">We couldn't find that set</h1>
+        <div className="mx-auto max-w-7xl px-4 py-16 text-center sm:px-6 lg:px-8">
+          <h1 className="text-2xl font-bold text-gray-900">We couldn&apos;t find that set</h1>
           <Link
             to="/vocab"
-            className="mt-4 inline-block font-semibold text-primary hover:underline"
+            className="mt-4 inline-block font-semibold text-red-600 hover:underline"
           >
             ← Back to all sets
           </Link>
@@ -75,110 +75,169 @@ export default function VocabSet(): JSX.Element {
 
   return (
     <SiteLayout>
-      <div className="site-container max-w-3xl">
-        <Link
-          to="/vocab"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          All sets
-        </Link>
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        {/* Back link */}
+        {mode === "overview" ? (
+          <Link
+            to="/vocab"
+            className="mb-3 inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to Vocabulary Sets
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMode("overview")}
+            className="mb-3 inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to {set.name}
+          </button>
+        )}
 
-        <div className="mt-5 flex items-start gap-4">
-          <span className="text-5xl" aria-hidden>
+        {/* Header */}
+        <div className="mb-4 flex items-center gap-4">
+          <span className="text-6xl" aria-hidden>
             {set.emoji}
           </span>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{set.name}</h1>
-            <p className="mt-1 text-muted-foreground">{set.summary}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{set.name}</h1>
+            <p className="mt-1 text-gray-600">{set.summary}</p>
           </div>
         </div>
 
-        {/* Mode switch */}
-        <div className="mt-7 inline-flex rounded-full border border-border bg-secondary/60 p-1">
-          {modes.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setMode(option.id)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all sm:px-5",
-                mode === option.id
-                  ? "bg-card text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <option.icon className="h-4 w-4" />
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-8">
-          {mode === "flashcards" && word && (
-            <div>
-              <div className="mb-5 flex items-center gap-4">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-300"
-                    style={{ width: `${((index + 1) / words.length) * 100}%` }}
-                  />
+        {/* Overview: mode cards + word list */}
+        {mode === "overview" && (
+          <>
+            <div className="mb-4 grid gap-4 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => startMode("flashcards")}
+                className="group flex items-center gap-4 rounded-xl border-2 border-gray-200 bg-white p-6 text-left transition-all hover:border-red-600 hover:shadow-lg"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-red-100 transition-colors group-hover:bg-red-600">
+                  <BookOpen className="h-7 w-7 text-red-600 transition-colors group-hover:text-white" />
                 </div>
-                <span className="text-sm font-medium tabular-nums text-muted-foreground">
-                  {index + 1}/{words.length}
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900">Flashcards</h3>
+                  <p className="text-gray-600">Review vocabulary with interactive cards</p>
+                </div>
+                <span className="text-2xl text-gray-400 transition-transform group-hover:translate-x-1">
+                  →
                 </span>
-              </div>
+              </button>
 
-              <Flashcard
-                word={word}
-                isFlipped={isFlipped}
-                onFlip={() => setIsFlipped((flipped) => !flipped)}
-              />
-
-              <div className="mt-6 flex items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => move(-1)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-5 py-3 text-sm font-semibold transition-colors hover:border-primary/50 hover:text-primary"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(1)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:brightness-110 active:scale-95"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => startMode("quiz")}
+                className="group flex items-center gap-4 rounded-xl border-2 border-gray-200 bg-white p-6 text-left transition-all hover:border-green-600 hover:shadow-lg"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-green-100 transition-colors group-hover:bg-green-600">
+                  <Brain className="h-7 w-7 text-green-600 transition-colors group-hover:text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900">Quiz Mode</h3>
+                  <p className="text-gray-600">Test your knowledge with multiple choice</p>
+                </div>
+                <span className="text-2xl text-gray-400 transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+              </button>
             </div>
-          )}
 
-          {mode === "quiz" && <QuizRunner words={words} distractorPool={pool} />}
-
-          {mode === "list" && (
-            <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
+            <h2 className="mb-6 text-2xl font-bold text-gray-900">
+              All Words ({words.length})
+            </h2>
+            <div className="space-y-3">
               {words.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center gap-4 bg-card px-5 py-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{entry.english}</p>
-                    <p className="text-sm italic text-muted-foreground">{entry.phonetic}</p>
-                  </div>
-                  <p className="dari-display shrink-0 text-2xl text-foreground">
-                    {entry.dari}
-                  </p>
-                  <AudioButton audioKey={entry.audioKey} text={entry.dari} size="sm" />
-                </li>
+                <VocabWordCard key={entry.id} word={entry} />
               ))}
-            </ul>
-          )}
-        </div>
+            </div>
+          </>
+        )}
+
+        {/* Flashcards */}
+        {mode === "flashcards" && word && (
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-5 flex items-center gap-4">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className="h-full rounded-full bg-red-600 transition-all duration-300"
+                  style={{ width: `${((index + 1) / words.length) * 100}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium tabular-nums text-gray-500">
+                {index + 1}/{words.length}
+              </span>
+            </div>
+
+            <Flashcard
+              word={word}
+              isFlipped={isFlipped}
+              onFlip={() => setIsFlipped((flipped) => !flipped)}
+            />
+
+            <div className="mt-6 flex items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => move(-1)}
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-red-600 hover:text-red-600"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => move(1)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-95"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quiz */}
+        {mode === "quiz" && (
+          <div className="mx-auto max-w-3xl">
+            <QuizRunner words={words} distractorPool={pool} />
+          </div>
+        )}
       </div>
     </SiteLayout>
+  );
+}
+
+/** Word row with audio, in the original site's card styling. */
+function VocabWordCard({ word }: { word: StudioWord }): JSX.Element {
+  return (
+    <div className="rounded-xl border-2 border-gray-200 bg-white p-6 transition-colors hover:border-gray-300">
+      <div className="flex items-center justify-between">
+        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-3">
+          <div>
+            <p className="mb-1 text-sm text-gray-500">English</p>
+            <p className="text-xl font-semibold text-gray-900">{word.english}</p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm text-gray-500">Dari</p>
+            <p className="text-left text-2xl font-semibold text-gray-900" dir="rtl">
+              {word.dari}
+            </p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm text-gray-500">Pronunciation</p>
+            <p className="text-xl font-medium italic text-gray-700">{word.phonetic}</p>
+          </div>
+        </div>
+        <AudioButton
+          audioKey={word.audioKey}
+          text={word.dari}
+          size="lg"
+          className="ml-6 h-14 w-14 border-red-200 bg-red-100 text-red-600 hover:bg-red-600 hover:text-white"
+        />
+      </div>
+    </div>
   );
 }

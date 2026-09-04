@@ -1,256 +1,216 @@
 import {
   BookOpen,
-  Compass,
   GraduationCap,
   Heart,
-  Languages,
+  Search,
+  Sparkles,
+  Users,
   Volume2,
 } from "lucide-react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { AudioButton } from "@/components/site/AudioButton";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { WaitlistForm } from "@/components/site/WaitlistForm";
-import { useContent } from "@/hooks/useContent";
-import type { StudioWord } from "@/lib/content";
 
-/** Shown in the hero until the live feed arrives, so the page never flashes empty. */
-const fallbackWord: StudioWord = {
-  id: "hero-salaam",
-  english: "Hello",
-  dari: "سلام",
-  phonetic: "salaam",
-};
-
-const sections: {
-  to: string;
-  title: string;
-  body: string;
-  icon: typeof BookOpen;
-}[] = [
-  {
-    to: "/vocab",
-    title: "Learn Vocab",
-    body: "Flashcards and quizzes with audio pronunciation",
-    icon: BookOpen,
-  },
-  {
-    to: "/learn",
-    title: "Learn to Read",
-    body: "Alphabet, sounds, and phrases with native pronunciation",
-    icon: GraduationCap,
-  },
-  {
-    to: "/culture",
-    title: "Discover More",
-    body: "Daily words, proverbs, and cultural insights",
-    icon: Compass,
-  },
-];
-
-const reasons: { title: string; body: string; icon: typeof Languages }[] = [
-  {
-    title: "Built specially for Dari",
-    body: "Designed with Dari language structure and culture in mind",
-    icon: Languages,
-  },
-  {
-    title: "Audio-first pronunciation",
-    body: "Speaker audio for every word and phrase",
-    icon: Volume2,
-  },
-  {
-    title: "For beginners & heritage learners",
-    body: "Whether starting fresh or reconnecting with roots",
-    icon: Heart,
-  },
-];
-
-const steps: { step: string; title: string; body: string }[] = [
-  {
-    step: "01",
-    title: "Meet the word",
-    body: "Every new word arrives on its own card — Dari script, how it sounds, what it means.",
-  },
-  {
-    step: "02",
-    title: "Practise it",
-    body: "Multiple choice, listening and matching keep coming back until the word sticks.",
-  },
-  {
-    step: "03",
-    title: "Keep it",
-    body: "Words you find hard return more often, so revision happens on its own.",
-  },
-];
-
+/**
+ * Home / landing page.
+ *
+ * Ported from the original learndari.com so the website keeps its familiar
+ * look: two-column hero with dual CTAs, "How It Works", "Why LearnDari",
+ * and the mission banner.
+ */
 export default function Home(): JSX.Element {
-  const { content } = useContent();
-  const heroWord = content.popularWords[0] ?? fallbackWord;
-
   return (
     <SiteLayout flush>
-      {/* Hero */}
-      <section className="hero-wash border-b border-border">
-        <div className="site-container grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-          <div className="animate-in-up">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Dari Language Learning
-            </span>
-
-            <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              The easiest way to
-              <br />
-              learn <span className="text-primary">Dari</span> online
-            </h1>
-
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              Learn words, pronunciation, and reading — with audio recorded by a native
-              speaker for every single word.
-            </p>
-
-            <div className="mt-8 max-w-lg">
-              <WaitlistForm source="home-hero" label="Get early access" />
-              <p className="mt-3 pl-1 text-sm text-muted-foreground">
-                The iPhone app is coming soon.{" "}
-                <Link
-                  to="/learn"
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  Or start learning free on the web →
-                </Link>
-              </p>
-            </div>
+      <div className="flex flex-1 flex-col bg-white">
+        {/* Section 1: Hero */}
+        <section className="relative overflow-hidden">
+          {/* Background image overlay */}
+          <div className="absolute inset-0">
+            <img
+              src="/homepage_background.jpg"
+              alt=""
+              className="h-full w-full object-cover opacity-[0.10]"
+            />
           </div>
+          <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
+            <div className="grid items-center gap-12 md:grid-cols-2">
+              {/* Left: text content */}
+              <div className="space-y-4">
+                <h1 className="text-3xl font-bold leading-tight text-gray-900 md:text-4xl lg:text-5xl">
+                  The easiest way to learn Dari online
+                </h1>
+                <p className="text-lg leading-relaxed text-gray-600">
+                  Learn words, pronunciation, and reading.
+                </p>
 
-          {/* A real word from the live feed, playable right on the homepage. */}
-          <div className="animate-in-up [animation-delay:120ms]">
-            <div className="app-card mx-auto max-w-sm p-8 text-center shadow-[0_24px_60px_-30px_hsl(var(--foreground)/0.28)]">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Try it — tap to listen
-              </p>
-              <p className="dari-display mt-5 text-6xl font-semibold text-foreground">
-                {heroWord.dari}
-              </p>
-              <p className="mt-4 text-lg italic text-muted-foreground">
-                {heroWord.phonetic}
-              </p>
-              <div className="my-5 h-px bg-border" />
-              <p className="text-2xl font-bold text-foreground">{heroWord.english}</p>
-              <div className="mt-6 flex justify-center">
-                <AudioButton
-                  audioKey={heroWord.audioKey}
-                  text={heroWord.dari}
-                  size="lg"
-                />
+                {/* CTA buttons */}
+                <div className="flex flex-col gap-4 pt-4 sm:flex-row">
+                  <Link
+                    to="/vocab"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-red-700 hover:shadow-xl"
+                  >
+                    <BookOpen className="h-5 w-5" />
+                    Start with Vocabulary
+                  </Link>
+                  <Link
+                    to="/learn"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-green-700 hover:shadow-xl"
+                  >
+                    <GraduationCap className="h-5 w-5" />
+                    Learn to Read Dari
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right: hero image */}
+              <div className="relative">
+                <div className="aspect-square overflow-hidden rounded-3xl border-4 border-white shadow-2xl">
+                  <img
+                    src="/education.avif"
+                    alt="Learn Dari - Language Learning Platform"
+                    width={600}
+                    height={600}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* How it works */}
-      <section className="site-container py-16 sm:py-20">
-        <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          How It Works
-        </h2>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {steps.map((step) => (
-            <div key={step.step} className="app-card p-7">
-              <span className="text-sm font-bold tracking-wider text-primary">
-                {step.step}
-              </span>
-              <h3 className="mt-3 text-xl font-semibold text-foreground">{step.title}</h3>
-              <p className="mt-2 leading-relaxed text-muted-foreground">{step.body}</p>
+        {/* Section 2: How It Works */}
+        <section className="bg-gray-50 py-16 md:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-12 text-center">
+              <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">
+                How It Works
+              </h2>
+              <p className="text-xl text-gray-600">Everything you need to master Dari</p>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Three sections */}
-      <section className="border-y border-border bg-secondary/40 py-16 sm:py-20">
-        <div className="site-container">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything you need to master Dari
-          </h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {sections.map((section) => (
-              <Link key={section.to} to={section.to} className="app-card-interactive group p-7">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-primary">
-                  <section.icon className="h-6 w-6" />
-                </span>
-                <h3 className="mt-5 text-xl font-semibold text-foreground">
-                  {section.title}
-                </h3>
-                <p className="mt-2 leading-relaxed text-muted-foreground">{section.body}</p>
-                <span className="mt-5 inline-block text-sm font-semibold text-primary">
-                  Start now
-                  <span className="ml-1 inline-block transition-transform group-hover:translate-x-1">
-                    →
-                  </span>
-                </span>
-              </Link>
-            ))}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <HowItWorksCard
+                icon={<Search className="h-8 w-8" />}
+                title="Explore"
+                description="Search for words in English or Dari from our database"
+                color="bg-blue-50 text-blue-600"
+              />
+              <HowItWorksCard
+                icon={<BookOpen className="h-8 w-8" />}
+                title="Learn Vocab"
+                description="Flashcards and quizzes with audio pronunciation"
+                color="bg-red-50 text-red-600"
+              />
+              <HowItWorksCard
+                icon={<GraduationCap className="h-8 w-8" />}
+                title="Learn to Read"
+                description="Alphabet, sounds, and phrases with native pronunciation"
+                color="bg-green-50 text-green-600"
+              />
+              <HowItWorksCard
+                icon={<Sparkles className="h-8 w-8" />}
+                title="Discover More"
+                description="Daily words, proverbs, and cultural insights"
+                color="bg-purple-50 text-purple-600"
+              />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Why LearnDari */}
-      <section className="site-container py-16 sm:py-20">
-        <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          Why LearnDari?
-        </h2>
-        <div className="mt-12 grid gap-10 md:grid-cols-3">
-          {reasons.map((reason) => (
-            <div key={reason.title} className="text-center">
-              <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-primary">
-                <reason.icon className="h-7 w-7" />
-              </span>
-              <h3 className="mt-5 text-lg font-semibold text-foreground">{reason.title}</h3>
-              <p className="mt-2 leading-relaxed text-muted-foreground">{reason.body}</p>
+        {/* Section 3: Why LearnDari */}
+        <section className="py-16 md:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-12 text-center">
+              <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">
+                Why LearnDari?
+              </h2>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Mission */}
-      <section className="border-t border-border bg-secondary/40 py-16 sm:py-20">
-        <div className="site-container max-w-3xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Why LearnDari Exists
-          </h2>
-          <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-            Dari is spoken by millions, yet there is almost nowhere good to learn it. For
-            families raised outside Afghanistan, the language slips away a generation at a
-            time. LearnDari exists so that anyone — a complete beginner, or someone
-            reconnecting with where they came from — can pick the language back up, hear it
-            spoken properly, and pass it on.
-          </p>
-          <Link
-            to="/about"
-            className="mt-8 inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
-          >
-            Read Our Mission →
-          </Link>
-        </div>
-      </section>
+            <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-3">
+              <WhyCard
+                icon={<Heart className="h-6 w-6" />}
+                title="Built specially for Dari"
+                description="Designed with Dari language structure and culture in mind"
+              />
+              <WhyCard
+                icon={<Volume2 className="h-6 w-6" />}
+                title="Audio-first pronunciation"
+                description="Speaker audio for every word and phrase"
+              />
+              <WhyCard
+                icon={<Users className="h-6 w-6" />}
+                title="For beginners & heritage learners"
+                description="Whether starting fresh or reconnecting with roots"
+              />
+            </div>
+          </div>
+        </section>
 
-      {/* Closing waitlist */}
-      <section className="site-container py-16 sm:py-20">
-        <div className="app-card mx-auto max-w-3xl p-8 text-center sm:p-12">
-          <p className="dari-display text-4xl font-semibold text-primary">دری</p>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
-            Be first to know when the app lands
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg leading-relaxed text-muted-foreground">
-            Everything here, in your pocket — with lessons that adapt to the words you find
-            hard. Leave your email and we'll tell you the day it's live.
-          </p>
-          <WaitlistForm source="home-footer" className="mx-auto mt-7 max-w-md" label="Notify me" />
-        </div>
-      </section>
+        {/* Section 4: Mission banner */}
+        <section className="flex flex-1 items-center bg-gradient-to-br from-red-600 to-green-600 py-16 md:py-24">
+          <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="mb-6 text-3xl font-bold text-white md:text-4xl">
+              Why LearnDari Exists
+            </h2>
+            <p className="mb-8 text-xl leading-relaxed text-white/90">
+              Finding quality Dari resources online shouldn&apos;t be this hard. LearnDari
+              was built to preserve our language for future generations and give heritage
+              speakers the tools to reconnect with their roots.
+            </p>
+            <Link
+              to="/about"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-8 py-4 font-semibold text-red-600 shadow-lg transition-colors hover:bg-gray-50"
+            >
+              Read Our Mission
+            </Link>
+          </div>
+        </section>
+      </div>
     </SiteLayout>
+  );
+}
+
+function HowItWorksCard({
+  icon,
+  title,
+  description,
+  color,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  color: string;
+}): JSX.Element {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-md transition-shadow hover:shadow-xl">
+      <div
+        className={`mb-4 flex h-14 w-14 items-center justify-center rounded-lg ${color}`}
+      >
+        {icon}
+      </div>
+      <h3 className="mb-2 text-xl font-bold text-gray-900">{title}</h3>
+      <p className="leading-relaxed text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function WhyCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+}): JSX.Element {
+  return (
+    <div className="space-y-3 text-center">
+      <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+        {icon}
+      </div>
+      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
   );
 }

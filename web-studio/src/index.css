@@ -18,7 +18,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 240 8% 7%;
 
-    --primary: 357 73% 49%;
+    --primary: 0 72% 51%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 5% 96%;
@@ -27,20 +27,20 @@ All colors MUST be HSL.
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 42%;
 
-    --accent: 357 60% 96%;
-    --accent-foreground: 357 73% 40%;
+    --accent: 0 72% 96%;
+    --accent-foreground: 0 72% 45%;
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --brand-green: 147 70% 28%;
+    --brand-green: 142 76% 36%;
     --brand-amber: 40 69% 50%;
 
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 357 73% 49%;
+    --ring: 0 72% 51%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -105,6 +105,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   }
 
   /* Dari script reads right to left and needs a little more room. */
