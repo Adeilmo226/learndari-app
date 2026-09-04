@@ -17,6 +17,9 @@ import Explore from "./pages/Explore";
 import Learn from "./pages/Learn";
 import Lesson from "./pages/Lesson";
 import Culture from "./pages/Culture";
+import Proverbs from "./pages/Proverbs";
+import Traditions from "./pages/Traditions";
+import WordOfTheDay from "./pages/WordOfTheDay";
 import Feedback from "./pages/Feedback";
 import Profile from "./pages/Profile";
 import AuthCallback from "./pages/AuthCallback";
@@ -54,6 +57,9 @@ const App = (): JSX.Element => (
                 <Route path="/learn" element={<Learn />} />
                 <Route path="/learn/:lessonId" element={<Lesson />} />
                 <Route path="/culture" element={<Culture />} />
+                <Route path="/culture/proverbs" element={<Proverbs />} />
+                <Route path="/culture/traditions" element={<Traditions />} />
+                <Route path="/culture/word-of-the-day" element={<WordOfTheDay />} />
                 <Route path="/feedback" element={<Feedback />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/privacy" element={<Privacy />} />
@@ -61,6 +67,9 @@ const App = (): JSX.Element => (
 
                 {/* Links from the old site keep working. */}
                 <Route path="/more" element={<Culture />} />
+                <Route path="/more/proverbs" element={<Proverbs />} />
+                <Route path="/more/culture" element={<Traditions />} />
+                <Route path="/more/word-of-the-day" element={<WordOfTheDay />} />
                 <Route path="/more/about" element={<About />} />
                 <Route path="/more/feedback" element={<Feedback />} />
 

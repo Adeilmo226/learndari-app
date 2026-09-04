@@ -1,4 +1,4 @@
-import { Menu, User, X } from "lucide-react";
+import { BookOpen, Earth, GraduationCap, Menu, Search, User, X } from "lucide-react";
 import { useState } from "react";
 import type { JSX } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
@@ -6,20 +6,17 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
-const links: { to: string; label: string }[] = [
-  { to: "/learn", label: "Learn" },
-  { to: "/vocab", label: "Vocab" },
-  { to: "/explore", label: "Explore" },
-  { to: "/culture", label: "Culture" },
+const links: { to: string; label: string; icon: typeof Search }[] = [
+  { to: "/explore", label: "Explore", icon: Search },
+  { to: "/vocab", label: "Vocab", icon: BookOpen },
+  { to: "/learn", label: "Learn", icon: GraduationCap },
+  { to: "/culture", label: "Culture", icon: Earth },
 ];
 
 function Wordmark(): JSX.Element {
   return (
-    <Link to="/" className="flex items-center gap-2.5" aria-label="LearnDari home">
-      <img src="/learndari-mark.png" alt="" className="h-9 w-9" />
-      <span className="text-lg font-bold tracking-tight text-foreground">
-        Learn<span className="text-primary">Dari</span>
-      </span>
+    <Link to="/" className="flex items-center" aria-label="LearnDari home">
+      <img src="/learndari-logo.png" alt="LearnDari" className="h-12 w-auto" />
     </Link>
   );
 }
@@ -51,39 +48,47 @@ function AccountButton({ onNavigate }: { onNavigate?: () => void }): JSX.Element
 export function SiteHeader(): JSX.Element {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-md">
-      <div className="site-container flex h-16 items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
+      <div className="site-container flex h-20 items-center justify-between gap-4">
         <Wordmark />
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-primary"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+        <nav className="hidden items-center gap-2 md:flex">
+          {links.map((link) => {
+            const Icon = link.icon;
+            return (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "text-foreground hover:bg-secondary",
+                  )
+                }
+              >
+                <Icon className="h-5 w-5" />
+                <span>{link.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-2.5 md:flex">
-          <Link
-            to="/learn"
-            className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform hover:brightness-110 active:scale-95"
-          >
-            Start learning
-          </Link>
-          <AccountButton />
+          {user ? (
+            <AccountButton />
+          ) : (
+            <Link
+              to="/profile"
+              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:brightness-110 active:scale-95"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 md:hidden">
@@ -101,30 +106,35 @@ export function SiteHeader(): JSX.Element {
       </div>
 
       {isOpen && (
-        <div className="border-t border-border bg-background md:hidden">
+        <div className="border-t border-border bg-white md:hidden">
           <nav className="site-container flex flex-col py-2">
-            {links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
+            {links.map((link) => {
+              const Icon = link.icon;
+              const active = location.pathname.startsWith(link.to);
+              return (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg px-3 py-3 text-base font-medium",
+                    active ? "bg-primary text-primary-foreground" : "text-foreground",
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {link.label}
+                </NavLink>
+              );
+            })}
+            {!user && (
+              <Link
+                to="/profile"
                 onClick={() => setIsOpen(false)}
-                className={cn(
-                  "rounded-lg px-3 py-3 text-base font-medium",
-                  location.pathname.startsWith(link.to)
-                    ? "text-primary"
-                    : "text-foreground",
-                )}
+                className="mt-2 mb-3 rounded-lg bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground"
               >
-                {link.label}
-              </NavLink>
-            ))}
-            <Link
-              to="/learn"
-              onClick={() => setIsOpen(false)}
-              className="mt-2 mb-3 rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold text-primary-foreground"
-            >
-              Start learning
-            </Link>
+                Sign In
+              </Link>
+            )}
           </nav>
         </div>
       )}

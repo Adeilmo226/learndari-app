@@ -1,188 +1,154 @@
-import { CalendarDays, Quote, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowRight, Calendar, Landmark, MessageCircle } from "lucide-react";
+import { useMemo } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
-import { AudioButton } from "@/components/site/AudioButton";
-import { PageHeading, SiteLayout } from "@/components/site/SiteLayout";
-import { Skeleton } from "@/components/ui/skeleton";
-import { allUniqueWords, useContent } from "@/hooks/useContent";
-import { cn } from "@/lib/utils";
-import type { StudioProverb, StudioWord } from "@/lib/content";
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { useContent } from "@/hooks/useContent";
+import type { StudioProverb } from "@/lib/content";
 
-const ALL = "All";
-
-/**
- * Picks the Word of the Day: the scheduled entry for today when the Studio has
- * one, otherwise a stable pick that changes daily rather than on every render.
- */
-function wordOfTheDay(scheduled: { date: string; word: StudioWord }[], pool: StudioWord[]): StudioWord | null {
-  const today = new Date().toISOString().slice(0, 10);
-  const planned = scheduled.find((entry) => entry.date === today);
-  if (planned) return planned.word;
-  if (pool.length === 0) return null;
-
+/** Stable Proverb of the Day: rotates once per day rather than per render. */
+function pickDailyProverb(proverbs: StudioProverb[]): StudioProverb | null {
+  if (proverbs.length === 0) return null;
   const daysSinceEpoch = Math.floor(Date.now() / 86_400_000);
-  return pool[daysSinceEpoch % pool.length];
+  return proverbs[daysSinceEpoch % proverbs.length];
 }
 
-function ProverbCard({ proverb }: { proverb: StudioProverb }): JSX.Element {
-  return (
-    <article className="app-card p-7">
-      <div className="flex items-start justify-between gap-4">
-        <Quote className="h-6 w-6 shrink-0 text-primary/40" />
-        <AudioButton audioKey={proverb.audioKey} text={proverb.dari} size="sm" />
-      </div>
-
-      <p className="dari-display mt-4 text-2xl leading-relaxed text-foreground">
-        {proverb.dari}
-      </p>
-      <p className="mt-3 text-sm italic text-muted-foreground">{proverb.phonetic}</p>
-
-      <p className="mt-5 text-lg font-semibold text-foreground">“{proverb.english}”</p>
-      <p className="mt-2 leading-relaxed text-muted-foreground">{proverb.meaning}</p>
-
-      {proverb.category && (
-        <span className="mt-5 inline-block rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
-          {proverb.category}
-        </span>
-      )}
-    </article>
-  );
-}
+const cultureItems: {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof MessageCircle;
+  href: string;
+  bgColor: string;
+  textColor: string;
+}[] = [
+  {
+    id: "proverbs",
+    title: "Dari Proverbs",
+    description: "Explore traditional Afghan wisdom and sayings",
+    icon: MessageCircle,
+    href: "/culture/proverbs",
+    bgColor: "bg-pink-100",
+    textColor: "text-pink-600",
+  },
+  {
+    id: "traditions",
+    title: "Culture & Traditions",
+    description: "Afghan food culture, holidays, and customs",
+    icon: Landmark,
+    href: "/culture/traditions",
+    bgColor: "bg-yellow-100",
+    textColor: "text-yellow-600",
+  },
+  {
+    id: "word-of-the-day",
+    title: "Word of the Day",
+    description: "Learn a new Dari word every day",
+    icon: Calendar,
+    href: "/culture/word-of-the-day",
+    bgColor: "bg-purple-100",
+    textColor: "text-purple-600",
+  },
+];
 
 export default function Culture(): JSX.Element {
-  const { content, isLoading } = useContent();
-  const [category, setCategory] = useState<string>(ALL);
-
-  const pool = useMemo(() => allUniqueWords(content), [content]);
-  const daily = useMemo(
-    () => wordOfTheDay(content.wordOfTheDaySchedule, pool),
-    [content.wordOfTheDaySchedule, pool],
-  );
-
-  const categories = useMemo<string[]>(() => {
-    const found = new Set(content.proverbs.map((proverb) => proverb.category).filter(Boolean));
-    return [ALL, ...[...found].sort()];
-  }, [content.proverbs]);
-
-  const proverbs = useMemo(
-    () =>
-      category === ALL
-        ? content.proverbs
-        : content.proverbs.filter((proverb) => proverb.category === category),
-    [content.proverbs, category],
-  );
+  const { content } = useContent();
+  const dailyProverb = useMemo(() => pickDailyProverb(content.proverbs), [content.proverbs]);
 
   return (
     <SiteLayout>
-      <PageHeading
-        title="Culture & Traditions"
-        subtitle="Explore Afghan culture, wisdom, and the language behind it."
-      />
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <h1 className="mb-4 text-2xl font-bold text-gray-900 md:text-3xl">Discover</h1>
+          <p className="text-xl text-gray-600">
+            Explore Afghan culture, wisdom, and traditions
+          </p>
+        </div>
 
-      <div className="site-container max-w-4xl">
-        {isLoading && <Skeleton className="h-60 rounded-2xl" />}
-
-        {/* Word of the Day */}
-        {!isLoading && daily && (
-          <section id="word-of-the-day" className="scroll-mt-24">
-            <div className="mb-4 flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold tracking-tight">Word of the Day</h2>
-            </div>
-
-            <div className="app-card hero-wash p-8 text-center sm:p-10">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {new Date().toLocaleDateString(undefined, {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
+        {/* Proverb of the Day banner */}
+        {dailyProverb && (
+          <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-green-600 shadow-xl">
+            <div className="p-6 text-white sm:p-8">
+              <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-white/60">
+                Proverb of the Day
               </p>
-              <p className="dari-display mt-5 text-6xl font-semibold text-foreground">
-                {daily.dari}
-              </p>
-              <p className="mt-4 text-lg italic text-muted-foreground">{daily.phonetic}</p>
-              <div className="mx-auto my-5 h-px w-24 bg-border" />
-              <p className="text-2xl font-bold text-foreground">{daily.english}</p>
 
-              <div className="mt-6 flex justify-center">
-                <AudioButton audioKey={daily.audioKey} text={daily.dari} size="lg" />
-              </div>
-
-              {daily.exampleDari && (
-                <div className="mx-auto mt-8 max-w-md rounded-2xl bg-card/70 p-5">
-                  <p className="dari-display text-lg text-foreground">{daily.exampleDari}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{daily.exampleEnglish}</p>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Proverbs */}
-        {!isLoading && content.proverbs.length > 0 && (
-          <section id="proverbs" className="mt-16 scroll-mt-24">
-            <div className="mb-4 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold tracking-tight">Dari Proverbs</h2>
-            </div>
-            <p className="mb-6 text-muted-foreground">
-              Traditional Afghan wisdom — the kind of thing you'll hear from a grandparent.
-            </p>
-
-            {categories.length > 2 && (
-              <div className="mb-6 flex flex-wrap gap-2">
-                {categories.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setCategory(option)}
-                    className={cn(
-                      "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
-                      category === option
-                        ? "border-primary bg-accent text-primary"
-                        : "border-border bg-card text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="grid gap-5 md:grid-cols-2">
-              {proverbs.map((proverb) => (
-                <ProverbCard key={proverb.id} proverb={proverb} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Everyday phrases */}
-        {!isLoading && content.phrases.length > 0 && (
-          <section className="mt-16">
-            <h2 className="text-xl font-bold tracking-tight">Everyday phrases</h2>
-            <p className="mb-6 mt-1 text-muted-foreground">
-              The expressions that come up constantly in Afghan homes and conversation.
-            </p>
-
-            <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
-              {content.phrases.map((phrase) => (
-                <li key={phrase.id} className="flex items-center gap-4 bg-card px-5 py-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">{phrase.english}</p>
-                    <p className="text-sm italic text-muted-foreground">{phrase.phonetic}</p>
-                  </div>
-                  <p className="dari-display shrink-0 text-2xl text-foreground">
-                    {phrase.dari}
+              <div className="flex flex-col gap-6 md:flex-row md:items-start">
+                {/* Right: Dari + phonetic */}
+                <div className="md:order-2 md:w-1/2">
+                  <p className="mb-2 text-right text-2xl font-bold sm:text-3xl" dir="rtl">
+                    {dailyProverb.dari}
                   </p>
-                  <AudioButton audioKey={phrase.audioKey} text={phrase.dari} size="sm" />
-                </li>
-              ))}
-            </ul>
-          </section>
+                  <p className="text-right text-lg italic text-white/60">
+                    {dailyProverb.phonetic}
+                  </p>
+                </div>
+
+                {/* Left: English + meaning */}
+                <div className="md:order-1 md:w-1/2">
+                  <p className="mb-3 text-xl font-semibold">
+                    &ldquo;{dailyProverb.english}&rdquo;
+                  </p>
+                  {dailyProverb.meaning && (
+                    <div className="mb-4 rounded-lg bg-white/10 p-4 backdrop-blur-sm">
+                      <p className="text-white/90">
+                        <span className="font-semibold text-white">Meaning:</span>{" "}
+                        {dailyProverb.meaning}
+                      </p>
+                    </div>
+                  )}
+                  {dailyProverb.category && (
+                    <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-sm font-medium text-white/90">
+                      {dailyProverb.category}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-white/20 pt-4">
+                <Link
+                  to="/culture/proverbs"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+                >
+                  Browse all proverbs
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Culture & Language */}
+        <div>
+          <h2 className="mb-6 text-2xl font-bold text-gray-900">Culture &amp; Language</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {cultureItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.id}
+                  to={item.href}
+                  className="group flex h-full flex-col rounded-xl border-2 border-gray-200 bg-white p-6 transition-all hover:border-gray-400 hover:shadow-xl"
+                >
+                  <div
+                    className={`mb-4 flex h-14 w-14 items-center justify-center rounded-lg ${item.bgColor} transition-transform group-hover:scale-110`}
+                  >
+                    <Icon className={`h-7 w-7 ${item.textColor}`} />
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold text-gray-900 transition-colors group-hover:text-red-600">
+                    {item.title}
+                  </h3>
+                  <p className="mb-4 text-gray-600">{item.description}</p>
+                  <div className="mt-auto text-2xl text-gray-400 transition-all group-hover:translate-x-2 group-hover:text-gray-900">
+                    →
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </SiteLayout>
   );
