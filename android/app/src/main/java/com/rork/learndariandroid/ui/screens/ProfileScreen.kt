@@ -51,6 +51,15 @@ import com.rork.learndariandroid.data.ProgressStore
 import com.rork.learndariandroid.ui.components.AppCard
 import com.rork.learndariandroid.ui.components.StatTile
 import com.rork.learndariandroid.ui.theme.Brand
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.clerk.api.Clerk
+import com.rork.learndariandroid.auth.ClerkAuth
+import kotlinx.coroutines.launch
 
 /** Tab 5 — learner stats and settings. */
 @Composable
@@ -74,6 +83,8 @@ fun ProfileScreen(
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        AccountCard()
+
         // Header
         AppCard(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
             Row(
@@ -403,4 +414,76 @@ private fun RowRule() {
 @Composable
 private fun PlainStat(value: String, label: String) {
     StatTile(value, label)
+}
+
+/** Sign-in / account card. Clerk-backed; shown at the top of the profile. */
+@Composable
+private fun AccountCard() {
+    val user by Clerk.userFlow.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+
+    AppCard(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (user == null) {
+                Text(
+                    "Save your progress",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Brand.Ink,
+                )
+                Text(
+                    "Sign in and your lessons, points and streak follow you across your devices.",
+                    fontSize = 14.sp,
+                    color = Brand.SecondaryInk,
+                )
+                Spacer(Modifier.height(2.dp))
+                OutlinedButton(
+                    onClick = {
+                        if (!busy) {
+                            busy = true
+                            scope.launch {
+                                runCatching { ClerkAuth.signInWithGoogle() }
+                                busy = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Continue with Google", color = Brand.Ink) }
+                Button(
+                    onClick = {
+                        if (!busy) {
+                            busy = true
+                            scope.launch {
+                                runCatching { ClerkAuth.signInWithApple() }
+                                busy = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Brand.Ink),
+                ) { Text("Continue with Apple", color = Color.White) }
+            } else {
+                Text(
+                    "You're signed in",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Brand.Ink,
+                )
+                Text(
+                    "Your progress is saved to your account.",
+                    fontSize = 14.sp,
+                    color = Brand.SecondaryInk,
+                )
+                Spacer(Modifier.height(2.dp))
+                OutlinedButton(
+                    onClick = { scope.launch { runCatching { ClerkAuth.signOut() } } },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Sign out", color = Brand.Red) }
+            }
+        }
+    }
 }
