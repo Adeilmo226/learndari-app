@@ -30,6 +30,7 @@ export { ContentStore } from "./content-store";
 
 import { supabaseConfig, selectOne, upsert, remove, type SupabaseConfig } from "./supabase";
 import { ensureAudioBucket, putAudio, getAudio, deleteAudio, listAudio } from "./storage";
+import { verifyClerkToken } from "./clerk";
 
 /** Decode a URL path segment, tolerating a segment that wasn't encoded. */
 function decodeKey(key: string): string {
@@ -38,6 +39,22 @@ function decodeKey(key: string): string {
   } catch {
     return key;
   }
+}
+
+/**
+ * Resolve the signed-in user for a request.
+ *
+ * Prefers a verified Clerk session token (the direction we're migrating to);
+ * falls back to the Rork-platform header for clients still on Rork Auth, so
+ * nothing breaks while each client switches over.
+ */
+async function resolveUserId(request: Request): Promise<string | null> {
+  const bearer = request.headers.get("Authorization")?.replace(/^Bearer /i, "").trim();
+  if (bearer) {
+    const clerkUserId = await verifyClerkToken(bearer);
+    if (clerkUserId) return clerkUserId;
+  }
+  return request.headers.get("X-Rork-User-Id");
 }
 
 interface Env {
@@ -245,7 +262,7 @@ export default {
  * "not signed in".
  */
 async function handleProgress(request: Request, env: Env): Promise<Response> {
-  const userId = request.headers.get("X-Rork-User-Id");
+  const userId = await resolveUserId(request);
   if (!userId) return json({ error: "Sign in first" }, 401);
 
   const config = supabaseConfig(env);
@@ -389,7 +406,7 @@ function isEntitled(row: SubscriptionRow | null): boolean {
  * so the two halves of the business can never disagree about who owes what.
  */
 async function handleSubscriptionRead(request: Request, env: Env): Promise<Response> {
-  const userId = request.headers.get("X-Rork-User-Id");
+  const userId = await resolveUserId(request);
   if (!userId) return json({ error: "Sign in first" }, 401);
 
   const config = supabaseConfig(env);
