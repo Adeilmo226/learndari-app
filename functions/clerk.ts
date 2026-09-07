@@ -1,27 +1,32 @@
 /**
  * Clerk session-token verification for the worker.
  *
- * LearnDari is moving identity to Clerk (the apps + website standardise on it,
- * and the old website's users are already Clerk users). The worker used to
- * trust an `X-Rork-User-Id` header injected by the Rork platform; going forward
- * it verifies a Clerk session JWT itself, so identity is owned by us and works
- * off any host.
+ * LearnDari owns identity through Clerk (the apps + website standardise on it,
+ * and the old website's users are already Clerk users). The worker verifies a
+ * Clerk session JWT itself rather than trusting a platform-injected header.
  *
- * Verification is offline: we fetch Clerk's public JWKS once (cached), then
- * check the RS256 signature, expiry, and issuer. No secret key is needed —
- * the JWKS is public — so this needs no new worker secret.
+ * Verification is offline: fetch Clerk's public JWKS (cached), then check the
+ * RS256 signature, expiry, and issuer. No secret key is needed.
+ *
+ * Both the production instance and the development instance are accepted so the
+ * new website can be built and tested before the production cutover. The
+ * production instance (direct domain and the /__clerk proxy) shares one set of
+ * signing keys; the development instance has its own.
+ *
+ * NOTE: before real launch, drop the development issuer from this map so the
+ * live backend only trusts production tokens.
  */
 
-/** Clerk keys are stable; cache the JWKS in memory for an hour. */
-const JWKS_URL = "https://clerk.learndari.com/.well-known/jwks.json";
-const JWKS_TTL_MS = 60 * 60 * 1000;
+/** Issuer -> JWKS endpoint. An issuer not listed here is rejected. */
+const JWKS_BY_ISSUER: Record<string, string> = {
+  "https://clerk.learndari.com": "https://clerk.learndari.com/.well-known/jwks.json",
+  "https://learndari.com/__clerk": "https://clerk.learndari.com/.well-known/jwks.json",
+  "https://learndari.com/__clerk/": "https://clerk.learndari.com/.well-known/jwks.json",
+  "https://premium-bobcat-39.clerk.accounts.dev":
+    "https://premium-bobcat-39.clerk.accounts.dev/.well-known/jwks.json",
+};
 
-/** Issuers our tokens can legitimately carry (direct domain and the proxy). */
-const ALLOWED_ISSUERS = new Set<string>([
-  "https://clerk.learndari.com",
-  "https://learndari.com/__clerk",
-  "https://learndari.com/__clerk/",
-]);
+const JWKS_TTL_MS = 60 * 60 * 1000;
 
 interface Jwk {
   kid: string;
@@ -32,7 +37,8 @@ interface Jwk {
   use?: string;
 }
 
-let jwksCache: { keys: Jwk[]; fetchedAt: number } | null = null;
+/** JWKS cached per endpoint URL. */
+const jwksCache = new Map<string, { keys: Jwk[]; fetchedAt: number }>();
 
 function base64UrlToBytes(input: string): Uint8Array {
   const b64 = input.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (input.length % 4)) % 4);
@@ -50,18 +56,20 @@ function decodeJson(segment: string): Record<string, unknown> | null {
   }
 }
 
-async function getJwks(): Promise<Jwk[]> {
-  if (jwksCache && Date.now() - jwksCache.fetchedAt < JWKS_TTL_MS) {
-    return jwksCache.keys;
+async function getJwks(url: string): Promise<Jwk[]> {
+  const cached = jwksCache.get(url);
+  if (cached && Date.now() - cached.fetchedAt < JWKS_TTL_MS) {
+    return cached.keys;
   }
   try {
-    const res = await fetch(JWKS_URL);
-    if (!res.ok) return jwksCache?.keys ?? [];
+    const res = await fetch(url);
+    if (!res.ok) return cached?.keys ?? [];
     const body = (await res.json()) as { keys?: Jwk[] };
-    jwksCache = { keys: body.keys ?? [], fetchedAt: Date.now() };
-    return jwksCache.keys;
+    const keys = body.keys ?? [];
+    jwksCache.set(url, { keys, fetchedAt: Date.now() });
+    return keys;
   } catch {
-    return jwksCache?.keys ?? [];
+    return cached?.keys ?? [];
   }
 }
 
@@ -77,7 +85,7 @@ async function importKey(jwk: Jwk): Promise<CryptoKey> {
 
 /**
  * Verify a Clerk session token. Returns the Clerk user id (`sub`) when the
- * token is valid, otherwise null — so a Rork token or a bad token simply
+ * token is valid, otherwise null — so a non-Clerk token or a bad token simply
  * falls through to the legacy path.
  */
 export async function verifyClerkToken(token: string): Promise<string | null> {
@@ -90,14 +98,15 @@ export async function verifyClerkToken(token: string): Promise<string | null> {
   if (header.alg !== "RS256" || typeof header.kid !== "string") return null;
 
   const iss = typeof payload.iss === "string" ? payload.iss : "";
-  if (!ALLOWED_ISSUERS.has(iss)) return null;
+  const jwksUrl = JWKS_BY_ISSUER[iss];
+  if (!jwksUrl) return null;
 
   const now = Math.floor(Date.now() / 1000);
   if (typeof payload.exp === "number" && payload.exp < now) return null;
   if (typeof payload.nbf === "number" && payload.nbf > now + 5) return null;
   if (typeof payload.sub !== "string" || !payload.sub) return null;
 
-  const jwk = (await getJwks()).find((k) => k.kid === header.kid);
+  const jwk = (await getJwks(jwksUrl)).find((k) => k.kid === header.kid);
   if (!jwk) return null;
 
   try {
