@@ -4,6 +4,7 @@ import android.app.Application
 import com.rork.learndariandroid.audio.AudioService
 import com.rork.learndariandroid.data.ContentRepository
 import com.rork.learndariandroid.data.ProgressStore
+import com.clerk.api.Clerk
 
 /**
  * Single place the app's long-lived services are created.
@@ -30,5 +31,7 @@ class LearnDariApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         AppGraph.init(this)
+        // Clerk (identity migration) — initialise the SDK (dev instance publishable key).
+        Clerk.initialize(this, publishableKey = "pk_test_cHJlbWl1bS1ib2JjYXQtMzkuY2xlcmsuYWNjb3VudHMuZGV2JA")
     }
 }
