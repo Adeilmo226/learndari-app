@@ -29,6 +29,16 @@
 export { ContentStore } from "./content-store";
 
 import { supabaseConfig, selectOne, upsert, remove, type SupabaseConfig } from "./supabase";
+import { ensureAudioBucket, putAudio, getAudio, deleteAudio, listAudio } from "./storage";
+
+/** Decode a URL path segment, tolerating a segment that wasn't encoded. */
+function decodeKey(key: string): string {
+  try {
+    return decodeURIComponent(key);
+  } catch {
+    return key;
+  }
+}
 
 interface Env {
   AZURE_SPEECH_KEY?: string;
@@ -156,6 +166,21 @@ export default {
 
     if (path.startsWith("/audio/") && request.method === "GET") {
       const key = path.slice("/audio/".length);
+
+      // Prefer Supabase Storage (durable, backed up); fall back to the Durable
+      // Object for any recording not yet migrated.
+      const cfg = supabaseConfig(env);
+      if (cfg) {
+        const stored = await getAudio(cfg, decodeKey(key));
+        if (stored) {
+          const headers = new Headers();
+          headers.set("Content-Type", stored.headers.get("Content-Type") ?? "audio/wav");
+          headers.set("Cache-Control", "public, max-age=3600");
+          for (const [name, value] of Object.entries(CORS_HEADERS)) headers.set(name, value);
+          return new Response(stored.body, { status: 200, headers });
+        }
+      }
+
       const res = await env.DO.fetch(storeRequest(`/recording/${key}`));
       const headers = new Headers(res.headers);
       for (const [name, value] of Object.entries(CORS_HEADERS)) headers.set(name, value);
@@ -546,7 +571,59 @@ async function handleAdmin(path: string, request: Request, env: Env): Promise<Re
   }
 
   if (path === "/admin/recordings" && request.method === "GET") {
-    return proxyToStore(env, storeRequest("/recordings"));
+    // Union of what's in Supabase Storage (primary) and any legacy recordings
+    // still in the Durable Object, so the Studio sees every key that has audio.
+    const cfg = supabaseConfig(env);
+    const recordings = new Map<string, Record<string, unknown>>();
+
+    const doRes = await env.DO.fetch(storeRequest("/recordings"));
+    if (doRes.ok) {
+      const doJson = (await doRes.json()) as {
+        recordings?: { key: string; mime?: string; durationMs?: number; createdAt?: number }[];
+      };
+      for (const r of doJson.recordings ?? []) {
+        recordings.set(r.key, { ...r, store: "durable-object" });
+      }
+    }
+
+    if (cfg) {
+      for (const key of await listAudio(cfg)) {
+        recordings.set(key, { ...(recordings.get(key) ?? { key }), key, store: "supabase" });
+      }
+    }
+
+    return json({ recordings: [...recordings.values()] });
+  }
+
+  if (path === "/admin/migrate-audio" && request.method === "POST") {
+    const cfg = supabaseConfig(env);
+    if (!cfg) return json({ error: "Supabase Storage is not configured" }, 400);
+    await ensureAudioBucket(cfg);
+
+    const listRes = await env.DO.fetch(storeRequest("/recordings"));
+    const { recordings = [] } = (await listRes.json()) as {
+      recordings?: { key: string; mime?: string }[];
+    };
+
+    let migrated = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (const rec of recordings) {
+      if (await getAudio(cfg, rec.key)) {
+        skipped++;
+        continue;
+      }
+      const src = await env.DO.fetch(storeRequest(`/recording/${encodeURIComponent(rec.key)}`));
+      if (!src.ok) {
+        failed++;
+        continue;
+      }
+      const bytes = await src.arrayBuffer();
+      const contentType = src.headers.get("Content-Type") ?? rec.mime ?? "audio/wav";
+      (await putAudio(cfg, rec.key, bytes, contentType)) ? migrated++ : failed++;
+    }
+
+    return json({ migrated, skipped, failed, total: recordings.length });
   }
 
   if (path === "/admin/waitlist" && request.method === "GET") {
@@ -564,19 +641,35 @@ async function handleAdmin(path: string, request: Request, env: Env): Promise<Re
     if (!key) return json({ error: "Missing audio key" }, 400);
 
     if (request.method === "PUT") {
+      const contentType = request.headers.get("Content-Type") ?? "audio/webm";
+      const body = await request.arrayBuffer();
+
+      // Store in Supabase Storage when configured; fall back to the Durable
+      // Object so uploads never fail if Storage is unavailable.
+      const cfg = supabaseConfig(env);
+      if (cfg) {
+        await ensureAudioBucket(cfg);
+        if (await putAudio(cfg, decodeKey(key), body, contentType)) {
+          return json({ ok: true, store: "supabase", key: decodeKey(key) });
+        }
+      }
+
       return proxyToStore(
         env,
         storeRequest(`/recording/${key}`, {
           method: "PUT",
           headers: {
-            "Content-Type": request.headers.get("Content-Type") ?? "audio/webm",
+            "Content-Type": contentType,
             "X-Duration-Ms": request.headers.get("X-Duration-Ms") ?? "0",
           },
-          body: await request.arrayBuffer(),
+          body,
         }),
       );
     }
     if (request.method === "DELETE") {
+      // Remove from both stores so a key can't linger in either.
+      const cfg = supabaseConfig(env);
+      if (cfg) await deleteAudio(cfg, decodeKey(key));
       return proxyToStore(env, storeRequest(`/recording/${key}`, { method: "DELETE" }));
     }
   }
