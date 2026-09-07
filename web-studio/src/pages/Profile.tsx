@@ -6,12 +6,12 @@ import { Link } from "react-router-dom";
 import { PageHeading, SiteLayout } from "@/components/site/SiteLayout";
 import { SignInPanel } from "@/components/site/SignInPanel";
 import { useContent } from "@/hooks/useContent";
-import { getAccessToken, useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useProgress, XP_PER_LEVEL } from "@/hooks/useProgress";
 import { deleteAccountProgress } from "@/lib/publicApi";
 
 export default function Profile(): JSX.Element {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading, signOut, getToken } = useAuth();
   const progress = useProgress();
   const { content } = useContent();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -26,14 +26,14 @@ export default function Profile(): JSX.Element {
   const deleteAccount = useCallback(async (): Promise<void> => {
     setIsDeleting(true);
     try {
-      const token = getAccessToken();
+      const token = await getToken();
       if (token) await deleteAccountProgress(token);
       progress.reset();
       signOut();
     } catch {
       setIsDeleting(false);
     }
-  }, [progress, signOut]);
+  }, [progress, signOut, getToken]);
 
   if (isLoading) {
     return (

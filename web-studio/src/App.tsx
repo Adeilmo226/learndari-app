@@ -5,7 +5,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ScrollToTop } from "@/components/site/ScrollToTop";
-import { AuthProvider } from "@/hooks/useAuth";
 import { ProgressProvider } from "@/hooks/useProgress";
 import { useProgressSync } from "@/hooks/useProgressSync";
 
@@ -41,9 +40,8 @@ function SyncGate({ children }: { children: ReactNode }): JSX.Element {
 
 const App = (): JSX.Element => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ProgressProvider>
-        <SyncGate>
+    <ProgressProvider>
+      <SyncGate>
           <TooltipProvider>
             <Toaster />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -83,9 +81,8 @@ const App = (): JSX.Element => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
-        </SyncGate>
-      </ProgressProvider>
-    </AuthProvider>
+      </SyncGate>
+    </ProgressProvider>
   </QueryClientProvider>
 );
 

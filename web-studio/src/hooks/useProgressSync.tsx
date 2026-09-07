@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { getAccessToken, useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import {
   emptyProgress,
   useProgress,
@@ -52,7 +52,7 @@ function hasAnyProgress(state: ProgressState): boolean {
  * the site before making an account never costs the learner their work.
  */
 export function useProgressSync(): void {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const progress = useProgress();
 
   const hasPulledFor = useRef<string | null>(null);
@@ -68,10 +68,13 @@ export function useProgressSync(): void {
     if (hasPulledFor.current === user.id) return;
     hasPulledFor.current = user.id;
 
-    const token = getAccessToken();
-    if (!token) return;
-
     const pull = async (): Promise<void> => {
+      const token = await getToken();
+      if (!token) {
+        // Session not ready yet: allow a retry on the next render.
+        hasPulledFor.current = null;
+        return;
+      }
       try {
         const remote = await fetchAccountProgress<ProgressState>(token);
         const local = progress.state;
@@ -91,29 +94,32 @@ export function useProgressSync(): void {
     };
 
     void pull();
-  }, [user, progress]);
+  }, [user, progress, getToken]);
 
   // Push changes, debounced so a burst of answers is one request.
   useEffect(() => {
     if (!user || hasPulledFor.current !== user.id) return;
-
-    const token = getAccessToken();
-    if (!token) return;
 
     const serialised = JSON.stringify(progress.state);
     if (serialised === lastPushed.current) return;
 
     if (pushTimer.current) window.clearTimeout(pushTimer.current);
     pushTimer.current = window.setTimeout(() => {
-      lastPushed.current = serialised;
-      void saveAccountProgress(token, progress.state).catch(() => {
-        // Let the next change retry rather than surfacing a sync error.
-        lastPushed.current = "";
-      });
+      void (async () => {
+        const token = await getToken();
+        if (!token) return;
+        lastPushed.current = serialised;
+        try {
+          await saveAccountProgress(token, progress.state);
+        } catch {
+          // Let the next change retry rather than surfacing a sync error.
+          lastPushed.current = "";
+        }
+      })();
     }, PUSH_DEBOUNCE_MS);
 
     return () => {
       if (pushTimer.current) window.clearTimeout(pushTimer.current);
     };
-  }, [user, progress.state]);
+  }, [user, progress.state, getToken]);
 }
